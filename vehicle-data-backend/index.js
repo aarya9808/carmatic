@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const multer = require('multer');
+const multer = require("multer");
 const { Parser } = require("json2csv");
 
 const upload = multer();
@@ -13,14 +13,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Parses application/x-www-form-urlencoded bodies
+const path = require("path");
 
+// serve static files from public
+app.use(express.static(path.join(__dirname, "vehicle-data-frontend")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "vehicle-data-frontend", "dashboard.html"));
+});
 
 // Connect to Supabase
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
-
 
 // GET: Export leads or vehicles
 app.get("/export/:type", async (req, res) => {
@@ -108,8 +114,6 @@ app.put("/update/:type/:id", async (req, res) => {
   }
 });
 
-
-
 // GET: Fetch Purchase Leads with Filters
 app.get("/purchase", async (req, res) => {
   try {
@@ -147,7 +151,6 @@ app.delete("/purchase/:id", async (req, res) => {
   }
 });
 
-
 // ✅ Route: Add Vehicle with up to 3 images
 // Add Vehicle with up to 3 images
 app.post("/vehicles", upload.array("images", 3), async (req, res) => {
@@ -156,7 +159,9 @@ app.post("/vehicles", upload.array("images", 3), async (req, res) => {
       req.body;
 
     // ✅ Ensure owner_type is a plain string, not an array
-    const cleanOwnerType = Array.isArray(owner_type) ? owner_type[0] : owner_type;
+    const cleanOwnerType = Array.isArray(owner_type)
+      ? owner_type[0]
+      : owner_type;
 
     let imageUrls = [];
 
@@ -220,7 +225,6 @@ app.get("/vehicles", async (req, res) => {
   }
 });
 
-
 /**
  * DELETE /vehicles/:id
  * - Removes DB row
@@ -238,7 +242,8 @@ app.delete("/vehicles/:id", async (req, res) => {
       .eq("id", id)
       .single();
 
-    if (fetchError && fetchError.code !== "PGRST116") { // single returns error if not found
+    if (fetchError && fetchError.code !== "PGRST116") {
+      // single returns error if not found
       console.warn("Fetch vehicle error:", fetchError);
       return res.status(404).json({ error: fetchError.message || "Not found" });
     }
@@ -247,7 +252,7 @@ app.delete("/vehicles/:id", async (req, res) => {
 
     // delete files from bucket (if present)
     const filesToRemove = imageUrls
-      .map(url => {
+      .map((url) => {
         try {
           // extract filename from public URL path
           const pathname = new URL(url).pathname; // e.g. /storage/v1/object/public/vehicle-images/169...
@@ -260,12 +265,17 @@ app.delete("/vehicles/:id", async (req, res) => {
       .filter(Boolean);
 
     if (filesToRemove.length) {
-      const { error: removeError } = await supabase.storage.from("vehicle-images").remove(filesToRemove);
+      const { error: removeError } = await supabase.storage
+        .from("vehicle-images")
+        .remove(filesToRemove);
       if (removeError) console.warn("Storage remove error:", removeError);
     }
 
     // delete row
-    const { error: deleteError } = await supabase.from("vehicle_stock").delete().eq("id", id);
+    const { error: deleteError } = await supabase
+      .from("vehicle_stock")
+      .delete()
+      .eq("id", id);
     if (deleteError) throw deleteError;
 
     res.json({ success: true });
@@ -279,11 +289,21 @@ app.delete("/vehicles/:id", async (req, res) => {
 // Update vehicle
 app.put("/vehicles/:id", async (req, res) => {
   try {
-    const { model, year, price, description, owner_type, name, mobile, status } =
-      req.body;
+    const {
+      model,
+      year,
+      price,
+      description,
+      owner_type,
+      name,
+      mobile,
+      status,
+    } = req.body;
 
     // ✅ Ensure owner_type is plain string
-    const cleanOwnerType = Array.isArray(owner_type) ? owner_type[0] : owner_type;
+    const cleanOwnerType = Array.isArray(owner_type)
+      ? owner_type[0]
+      : owner_type;
 
     const { data, error } = await supabase
       .from("vehicle_stock")
@@ -305,7 +325,6 @@ app.put("/vehicles/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // POST: Add Insurance Lead
 app.post("/leads/insurance", async (req, res) => {
@@ -355,9 +374,6 @@ app.delete("/insurance/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
