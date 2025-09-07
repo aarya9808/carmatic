@@ -16,11 +16,11 @@ app.use(express.urlencoded({ extended: true })); // Parses application/x-www-for
 const path = require("path");
 
 // serve static files from public
-app.use(express.static(path.join(__dirname, "vehicle-data-frontend")));
+// app.use(express.static(path.join(__dirname, "vehicle-data-frontend")));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "vehicle-data-frontend", "dashboard.html"));
-});
+// app.get("/", (req, res) => {
+//   res.sendFile(path.join(__dirname, "vehicle-data-frontend", "dashboard.html"));
+// });
 
 // Connect to Supabase
 const supabase = createClient(
